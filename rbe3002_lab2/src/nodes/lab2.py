@@ -63,7 +63,9 @@ class Lab2:
         :param linear_speed [float] [m/s] The forward linear speed.
         """
         # REQUIRED CREDIT
-        
+        pose = Odometry()
+        self.update_odometry(pose)
+
         initx =  self.px
         inity =  self.py
 
@@ -75,7 +77,7 @@ class Lab2:
             if(distance > math.sqrt((self.px - initx)**2 + (self.py-inity)**2)):
                 vel_msg.linear.x = linear_speed
                 self.vel_pub.publish(vel_msg)
-                
+
                 #print(math.sqrt((self.px - initx)**2 + (self.py-inity)**2))
 
                 rospy.sleep(0.05)
@@ -95,16 +97,20 @@ class Lab2:
         :param angular_speed [float] [rad/s] The angular speed.
         """
         # REQUIRED CREDIT
-        inita = math.degrees(self.pth)
-        print(inita)
-        goal = inita+angle
+        pose = Odometry()
+        self.update_odometry(pose)
+        goal = self.pth+angle
+        print("Self " + str(self.pth))
+        print("Goal " + str(goal))
         vel_msg = Twist()
         done = False
         while not done:
-            if(goal > self.pth):
+            if(goal > 0 and goal > self.pth):
                 vel_msg.angular.z = abs(aspeed)
                 self.vel_pub.publish(vel_msg)
-                #print(self.pth)
+            elif goal < 0 and goal < self.pth:
+                vel_msg.angular.z = -abs(aspeed)
+                self.vel_pub.publish(vel_msg)
         
             else:
                 vel_msg.angular.z = 0
@@ -119,7 +125,25 @@ class Lab2:
         :param msg [PoseStamped] The target pose.
         """
         # REQUIRED CREDIT
-        pass  # delete this when you implement your code
+        x = msg.pose.position.x
+        y = msg.pose.position.y
+        print(x)
+        print(y)
+
+        distance = math.sqrt(math.pow((x - self.px), 2) + math.pow((y - self.py), 2)) 
+        newx = x - self.py
+        newy = y - self.px
+        firstTurn = (math.atan2(newy, newx)) + self.pth
+
+        self.rotate (firstTurn, 0.5)
+        self.drive(distance, 0.22)
+        rospy.sleep(.5)
+        quat_orig = msg.pose.orientation
+        quat_list = [quat_orig.x, quat_orig.y, quat_orig.z, quat_orig.w]
+        (roll, pitch, yaw) = euler_from_quaternion(quat_list)
+
+        print(yaw+self.py)
+        self.rotate(yaw-self.py, 0.5)
 
     def update_odometry(self, msg):
         """
@@ -141,10 +165,17 @@ class Lab2:
         while not rospy.is_shutdown():
             l = Lab2()
             pose = Odometry()
+            msg = PoseStamped()
+            msg.pose.position.x = 0.25   
+            msg.pose.position.y = 0.5
+            msg.pose.position.z = 0
+
             l.update_odometry(pose)
-            l.drive(.5,0.5)
-            l.update_odometry(pose)
-            l.rotate(1.2,0.5)
+            l.go_to(msg)
+            
+            #l.drive(.5,0.5)
+            #l.update_odometry(pose)
+            #l.rotate(1.2,0.5)
             rospy.signal_shutdown("Assignment Complete")             
 
             
