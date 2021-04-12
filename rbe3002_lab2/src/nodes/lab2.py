@@ -68,18 +68,16 @@ class Lab2:
         inity =  self.py
 
         done = False
-        while not done and not rospy.is_shutdown():
+        while not done:
             vel_msg = Twist()
 
             #If the robot has not reached the distance update the positions and keep going.
             if(distance > math.sqrt((self.px - initx)**2 + (self.py-inity)**2)):
                 vel_msg.linear.x = linear_speed
                 self.vel_pub.publish(vel_msg)
-
-                #print(pose.position.y)
-                #print(pose.position.x)
-                #print(math.sqrt((self.px - initx)**2 + (self.py-inity)**2))
                 
+                #print(math.sqrt((self.px - initx)**2 + (self.py-inity)**2))
+
                 rospy.sleep(0.05)
 
             #If the Robot has reached the distance then stop the robot and shutdown rospy.
@@ -87,7 +85,6 @@ class Lab2:
                 vel_msg.linear.x = 0
                 self.vel_pub.publish(vel_msg)
                 done = True
-                rospy.signal_shutdown("Reached Drive") 
             
         
 
@@ -98,7 +95,22 @@ class Lab2:
         :param angular_speed [float] [rad/s] The angular speed.
         """
         # REQUIRED CREDIT
-        pass  # delete this when you implement your code
+        inita = math.degrees(self.pth)
+        print(inita)
+        goal = inita+angle
+        vel_msg = Twist()
+        done = False
+        while not done:
+            if(goal > self.pth):
+                vel_msg.angular.z = abs(aspeed)
+                self.vel_pub.publish(vel_msg)
+                #print(self.pth)
+        
+            else:
+                vel_msg.angular.z = 0
+                self.vel_pub.publish(vel_msg)
+                done = True
+
 
     def go_to(self, msg):
         """
@@ -130,7 +142,10 @@ class Lab2:
             l = Lab2()
             pose = Odometry()
             l.update_odometry(pose)
-            l.drive(.5,0.5)            
+            l.drive(.5,0.5)
+            l.update_odometry(pose)
+            l.rotate(1.2,0.5)
+            rospy.signal_shutdown("Assignment Complete")             
 
             
 
