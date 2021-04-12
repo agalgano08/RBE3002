@@ -1,0 +1,10 @@
+<launch>
+ 
+<!-- Start Gazebo. --> 
+<include file="$(find gazebo_ros)/launch/empty_world.launch"/>
+
+<include file="$(find turtlebot3_bringup)/launch/turtlebot3_model.launch"/>
+
+<node pkg="lab2pkg" name="lab2" type="lab2.py"/>
+  
+</launch>
