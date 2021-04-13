@@ -23,7 +23,8 @@ class Lab2:
 
         odom = rospy.Subscriber('/odom', Odometry, self.update_odometry)
 
-        rospy.Subscriber('/move_base_simple/goal', PoseStamped, self.go_to)
+        goalGoTo = rospy.Subscriber('/move_base_simple/goal', PoseStamped, self.go_to)
+        rospy.sleep(1)
 
         self.px = 0
         self.py = 0
@@ -63,11 +64,11 @@ class Lab2:
         :param linear_speed [float] [m/s] The forward linear speed.
         """
         # REQUIRED CREDIT
-        pose = Odometry()
-        self.update_odometry(pose)
+
 
         initx =  self.px
         inity =  self.py
+
 
         done = False
         while not done:
@@ -97,25 +98,39 @@ class Lab2:
         :param angular_speed [float] [rad/s] The angular speed.
         """
         # REQUIRED CREDIT
-        pose = Odometry()
-        self.update_odometry(pose)
-        goal = self.pth+angle
-        print("Self " + str(self.pth))
-        print("Goal " + str(goal))
+        print("Given Angle" + str(angle))
+        initial = self.pth
+        final = angle+self.pth
+        final = ((final + math.pi)%(2*math.pi)) - math.pi
+        goal = self.calculate(initial,final)
+
+        print("Goal" + str(goal))
         vel_msg = Twist()
-        done = False
-        while not done:
-            if(goal > 0 and goal > self.pth):
-                vel_msg.angular.z = abs(aspeed)
-                self.vel_pub.publish(vel_msg)
-            elif goal < 0 and goal < self.pth:
-                vel_msg.angular.z = -abs(aspeed)
-                self.vel_pub.publish(vel_msg)
-        
+
+            
+        if goal > 0:
+            vel_msg.angular.z = abs(aspeed)
+            self.vel_pub.publish(vel_msg)
+        else:
+            vel_msg.angular.z = -abs(aspeed)
+            self.vel_pub.publish(vel_msg)
+
+        while abs(self.calculate(self.pth, final)) > 0.005:
+            rospy.sleep(0.01)
+
+        print("Final " + str(self.pth))
+        vel_msg.angular.z = 0
+        self.vel_pub.publish(vel_msg)
+
+
+    def calculate(self, initial, final):
+        if abs(final - initial) <= math.pi:
+            return final-initial
+        else:
+            if(initial < final):
+                return final - (initial + 2*math.pi)
             else:
-                vel_msg.angular.z = 0
-                self.vel_pub.publish(vel_msg)
-                done = True
+                return (final + 2*math.pi) - initial + 2*math.pi
 
 
     def go_to(self, msg):
@@ -127,23 +142,24 @@ class Lab2:
         # REQUIRED CREDIT
         x = msg.pose.position.x
         y = msg.pose.position.y
-        print(x)
-        print(y)
 
         distance = math.sqrt(math.pow((x - self.px), 2) + math.pow((y - self.py), 2)) 
-        newx = x - self.py
-        newy = y - self.px
-        firstTurn = (math.atan2(newy, newx)) + self.pth
+        newx = x - self.px
+        newy = y - self.py
+        print("GOTOSELF-PTH", str(self.pth))
+        print("new Px" + str(newx))
+        print("new Py" + str(newy))
+        firstTurn = self.calculate(self.pth, math.atan2(newy, newx))
 
-        self.rotate (firstTurn, 0.5)
-        self.drive(distance, 0.22)
-        rospy.sleep(.5)
+        self.rotate (firstTurn, 0.15)
+        rospy.sleep(1)
+        self.drive(distance, 0.1)
+        rospy.sleep(.25)
         quat_orig = msg.pose.orientation
         quat_list = [quat_orig.x, quat_orig.y, quat_orig.z, quat_orig.w]
         (roll, pitch, yaw) = euler_from_quaternion(quat_list)
 
-        print(yaw+self.py)
-        self.rotate(yaw-self.py, 0.5)
+        self.rotate(self.calculate(self.pth, yaw), 0.15)
 
     def update_odometry(self, msg):
         """
@@ -161,25 +177,7 @@ class Lab2:
 
 
     def run(self):
-        
-        while not rospy.is_shutdown():
-            l = Lab2()
-            pose = Odometry()
-            msg = PoseStamped()
-            msg.pose.position.x = 0.25   
-            msg.pose.position.y = 0.5
-            msg.pose.position.z = 0
-
-            l.update_odometry(pose)
-            l.go_to(msg)
-            
-            #l.drive(.5,0.5)
-            #l.update_odometry(pose)
-            #l.rotate(1.2,0.5)
-            rospy.signal_shutdown("Assignment Complete")             
-
-            
-
+        rospy.spin()           
 
 if __name__ == '__main__':
     l = Lab2()
